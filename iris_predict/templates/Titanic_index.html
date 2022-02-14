@@ -1,0 +1,40 @@
+<title>Titanic Predict App</title>
+<style>
+#wrapper {
+   text-align: center;
+}
+</style>
+
+      <div id="wrapper">
+         {% for message in form.Pclass.errors %}
+            <div>{{ message }}</div>
+         {% endfor %}
+
+         {% for message in form.Sex.errors %}
+            <div>{{ message }}</div>
+         {% endfor %}
+
+         {% for message in form.SibSp.errors %}
+            <div>{{ message }}</div>
+         {% endfor %}
+
+         {% for message in form.Parch.errors %}
+            <div>{{ message }}</div>
+         {% endfor %}
+
+         <form method="post">
+            {{ form.Pclass.label }}<br>
+            {{ form.Pclass }}
+            <br>
+            {{ form.Sex.label }}<br>
+            {{ form.Sex }}
+            <br>
+            {{ form.SibSp.label }}<br>
+            {{ form.SibSp }}
+            <br>
+            {{ form.Parch.label }}<br>
+            {{ form.Parch }}
+            <br>
+            {{ form.submit }}
+         </form>
+      </div>
