@@ -71,7 +71,7 @@ class IrisForm(Form):
 class t_Form(Form):
     Pclass = SelectField("チケットクラス", choices=[1,2,3])
 
-    Sex  = SelectField("性別", choices=[1,2])
+    Sex  = SelectField("性別", choices=[0,1])
 
     SibSp = SelectField("同乗している兄弟/配偶者の数", choices=[0,1,2,3,4,5,8])
 
@@ -111,11 +111,12 @@ def t_predicts():
             return render_template('Titanic_index.html', form=form)
         else:            
             Pclass = float(request.form["Pclass"])        
-            Sex  = float(request.form["Sex"])            
             SibSp = float(request.form["SibSp"])            
             Parch  = float(request.form["Parch"])
+            Male  = float(request.form["Sex"])
+            Female  = 1 - float(request.form["Sex"])
 
-            x = np.array([Pclass, Sex, SibSp, Parch])
+            x = np.array([Pclass, SibSp, Parch, Female, Male])
             t_pred = t_predict(x)
             t_Name = t_getName(t_pred)
 
