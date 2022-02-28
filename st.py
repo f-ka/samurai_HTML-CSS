@@ -4,7 +4,7 @@ import pandas as pd
 import yfinance as yf
 import matplotlib.pyplot as plt
 
-data = pd.read_csv("topix500.csv")
+data = pd.read_csv("topix500.csv", nrows=1)
 #data = pd.read_csv("sample.csv")
 #data = pd.read_csv("one.csv")
 print(data)
@@ -19,7 +19,7 @@ dummy_ticker = None
 for i in tickers.tickers:
     if dummy_ticker == None:
         dummy_ticker = i
-    closes.append(tickers.tickers[i].history(period="max").Close)
+    closes.append(tickers.tickers[i].history(period="1y").Close)
 
 # 時間によって止まる？
 closes = pd.DataFrame(closes).T   # DataFrame化

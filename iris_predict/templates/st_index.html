@@ -1,0 +1,33 @@
+<title>SystemTrade App</title>
+<style>
+#wrapper {
+   text-align: center;
+}
+</style>
+
+      <div id="wrapper">
+         {% for message in form.StockName.errors %}
+            <div>{{ message }}</div>
+         {% endfor %}
+
+         {% for message in form.Years.errors %}
+            <div>{{ message }}</div>
+         {% endfor %}
+
+         {% for message in form.Since.errors %}
+            <div>{{ message }}</div>
+         {% endfor %}
+
+         <form method="post">
+            {{ form.StockName.label }}<br>
+            {{ form.StockName }}
+            <br>
+            {{ form.Years.label }}<br>
+            {{ form.Years }}
+            <br>
+            {{ form.Since.label }}<br>
+            {{ form.Since }}年4月以降
+            <br>
+            {{ form.submit }}
+         </form>
+      </div>
