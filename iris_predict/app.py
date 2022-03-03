@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, flash, send_file
+from flask import Flask, render_template, request, flash, send_file, make_response
 from soupsieve import select
 from wtforms import Form, FloatField, SubmitField, validators, ValidationError, SelectField, IntegerField
 import numpy as np
@@ -12,6 +12,8 @@ import json
 import datetime
 import pandas as pd
 import yfinance as yf
+from io import BytesIO
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 # 学習済みモデルを読み込み利用します
 def predict(parameters):
@@ -275,7 +277,33 @@ def st():
             return render_template('st_result.html', form=form)
     elif request.method == 'GET':
         return render_template('st_index.html', form=form) 
-    
+
+@app.route('/Chart',methods=["GET","POST"])
+def chart():
+    ticker = yf.Ticker("9984.T")
+    hist = ticker.history(period="2y")
+    ma_1 = 5
+    ma_2 = 25
+    sma_1 = hist.Close.rolling(window=ma_1, min_periods=1).mean()
+    sma_2 = hist.Close.rolling(window=ma_2, min_periods=1).mean()
+    diff = sma_1 - sma_2
+    gc = sma_1[(diff.shift(1) < 0) & (diff > 0)]
+    dc = sma_1[(diff.shift(1) > 0) & (diff < 0)]
+    fig = plt.figure(figsize=(15, 5))
+    plt.plot(sma_1, label="Moving Average {} days".format(ma_1))
+    plt.plot(sma_2, label="Moving Average {} days".format(ma_2))
+    plt.scatter(gc.index, gc, label="Golden Cross", s=50, c="red", alpha=0.7)
+    plt.scatter(dc.index, dc, label="Dead Cross", s=50, c="black", alpha=0.7)
+    plt.grid(True)
+    plt.legend()
+    canvas = FigureCanvasAgg(fig)
+    png_output = BytesIO()
+    canvas.print_png(png_output)
+    data = png_output.getvalue()
+    response = make_response(data)
+    response.headers['Content-Type'] = 'image/png'
+    return response
+
 @app.route('/hello',methods=["GET","POST"])
 def hello():
     image = io.BytesIO()
@@ -286,7 +314,7 @@ def hello():
     image.seek(0)
     return send_file(image,
                      attachment_filename="image.png",
-                     as_attachment=True)    
+                     as_attachment=True)
 
 if __name__ == "__main__":
     app.run(use_reloader=False, threaded=False)
