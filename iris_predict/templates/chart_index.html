@@ -1,0 +1,26 @@
+<title>株価チャート</title>
+<style>
+   #wrapper {
+      text-align: center;
+   }
+</style>
+
+<div id="wrapper">
+   {% for message in form.StockName.errors %}
+   <div>{{ message }}</div>
+   {% endfor %}
+
+   {% for message in form.Period.errors %}
+   <div>{{ message }}</div>
+   {% endfor %}
+
+   <form method="post">
+      {{ form.StockName.label }}<br>
+      {{ form.StockName }}
+      <br>
+      {{ form.Period.label }}<br>
+      {{ form.Period }}
+      <br>
+      {{ form.submit }}
+   </form>
+</div>
