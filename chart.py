@@ -10,16 +10,25 @@ hist = ticker.history(period="2y")
 
 ma_1 = 5
 ma_2 = 25
-#ma_3 = 75
+# ma_3 = 75
 
+hist["sma_1"] = hist.Close.rolling(window=ma_1, min_periods=1).mean()
+hist["sma_2"] = hist.Close.rolling(window=ma_2, min_periods=1).mean()
 sma_1 = hist.Close.rolling(window=ma_1, min_periods=1).mean()
 sma_2 = hist.Close.rolling(window=ma_2, min_periods=1).mean()
-#sma_3 = hist.Close.rolling(window=ma_3, min_periods=1).mean()
-diff = sma_1 - sma_2
-gc = sma_1[(diff.shift(1) < 0) & (diff > 0)]
-dc = sma_1[(diff.shift(1) > 0) & (diff < 0)]
+# sma_3 = hist.Close.rolling(window=ma_3, min_periods=1).mean()
 
-'''
+diff = sma_1 - sma_2
+hist["gc"] = (diff.shift(1) < 0) & (diff > 0)
+hist["dc"] = (diff.shift(1) > 0) & (diff < 0)
+# gc = sma_1[(diff.shift(1) < 0) & (diff > 0)]
+# dc = sma_1[(diff.shift(1) > 0) & (diff < 0)]
+
+hist = hist[hist["gc"] != 0 or hist["dc"] != 0]
+
+print(hist)
+
+"""
 periods = [5, 25, 75]
 cols = []
 for period in periods:
@@ -28,20 +37,20 @@ for period in periods:
     cols.append(col)
 for col in cols:
     plt.plot(hist[col], label=col)
-'''
+"""
 
 plt.subplots(figsize=(15, 5))
-#plt.plot(hist.Close)
+# plt.plot(hist.Close)
 plt.plot(sma_1, label="Moving Average {} days".format(ma_1))
 plt.plot(sma_2, label="Moving Average {} days".format(ma_2))
-#plt.plot(sma_3, label="Moving Average {} days".format(ma_3))
+# plt.plot(sma_3, label="Moving Average {} days".format(ma_3))
 plt.scatter(gc.index, gc, label="Golden Cross", s=50, c="red", alpha=0.7)
 plt.scatter(dc.index, dc, label="Dead Cross", s=50, c="black", alpha=0.7)
 plt.grid(True)
 plt.legend()
 plt.show()
 
-'''
+"""
 # get stock info
 ticker.info
 
@@ -98,4 +107,4 @@ ticker.news
 # get option chain for specific expiration
 opt = ticker.option_chain('YYYY-MM-DD')
 # data available via: opt.calls, opt.puts
-'''
+"""
