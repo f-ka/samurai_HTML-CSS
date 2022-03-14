@@ -1,10 +1,12 @@
 import yfinance as yf
 import matplotlib.pyplot as plt
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, accuracy_score
 
 ticker = yf.Ticker("9984.T")
 
 # get historical market data
-hist = ticker.history(period="2y")
+hist = ticker.history(period="max")
 # valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max
 # valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
 
@@ -24,31 +26,54 @@ hist["dc"] = (diff.shift(1) > 0) & (diff < 0)
 # gc = sma_1[(diff.shift(1) < 0) & (diff > 0)]
 # dc = sma_1[(diff.shift(1) > 0) & (diff < 0)]
 
-hist = hist[hist["gc"] != 0 or hist["dc"] != 0]
+hist = hist[hist["gc"] | hist["dc"] == True]
+hist["Return"] = hist.Close.diff()
+hist = hist[hist["dc"] == True]
+hist["Result"] = "LOSE"
+hist["Result"][hist["Return"] > 0] = "WIN"
+Total = hist["Return"].sum()
+print("Total: ", Total)
+train = hist["2000-01-04":"2015-12-31"]
+print(train)
+test = hist["2016-01-01":]
+print(test)
 
-print(hist)
+x_train = train[["Open", "High", "Low", "Close", "Volume", "sma_1", "sma_2"]]
+y_train = train["Result"]
+
+x_test = test[["Open", "High", "Low", "Close", "Volume", "sma_1", "sma_2"]]
+y_test = test["Result"]
+
+
+model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=1)
+model.fit(x_train, y_train)
+pred = model.predict(x_test)
+
+print("result: ", model.score(x_test, y_test))
+print(classification_report(y_test, pred))
 
 """
-periods = [5, 25, 75]
-cols = []
-for period in periods:
-    col = "{} windows simple moving average".format(period)
-    hist[col] = hist.Close.rolling(period, min_periods=1).mean()
-    cols.append(col)
-for col in cols:
-    plt.plot(hist[col], label=col)
+# periods = [5, 25, 75]
+# cols = []
+# for period in periods:
+#     col = "{} windows simple moving average".format(period)
+#     hist[col] = hist.Close.rolling(period, min_periods=1).mean()
+#     cols.append(col)
+# for col in cols:
+#     plt.plot(hist[col], label=col)
 """
 
-plt.subplots(figsize=(15, 5))
+# plt.subplots(figsize=(15, 5))
 # plt.plot(hist.Close)
-plt.plot(sma_1, label="Moving Average {} days".format(ma_1))
-plt.plot(sma_2, label="Moving Average {} days".format(ma_2))
-# plt.plot(sma_3, label="Moving Average {} days".format(ma_3))
-plt.scatter(gc.index, gc, label="Golden Cross", s=50, c="red", alpha=0.7)
-plt.scatter(dc.index, dc, label="Dead Cross", s=50, c="black", alpha=0.7)
-plt.grid(True)
-plt.legend()
-plt.show()
+# plt.plot(sma_1, label="Moving Average {} days".format(ma_1))
+# plt.plot(sma_2, label="Moving Average {} days".format(ma_2))
+# # plt.plot(sma_3, label="Moving Average {} days".format(ma_3))
+# plt.scatter(gc.index, gc, label="Golden Cross", s=50, c="red", alpha=0.7)
+# plt.scatter(dc.index, dc, label="Dead Cross", s=50, c="black", alpha=0.7)
+# plt.grid(True)
+# plt.legend()
+# plt.show()
+
 
 """
 # get stock info
