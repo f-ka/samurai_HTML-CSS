@@ -3,6 +3,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.neural_network import MLPClassifier
 from sklearn.externals import joblib
 from sklearn.metrics import classification_report, accuracy_score
+
 # import pickle
 
 # データ取得
