@@ -34,7 +34,9 @@ hist["dc"] = (diff.shift(1) > 0) & (diff < 0)
 
 hist = hist[hist["gc"] | hist["dc"] == True]
 hist["Return"] = hist.Close.diff().shift(-1)
-# hist = hist[hist["dc"] == True]
+print(hist)
+hist = hist[hist["dc"] == True]
+print(hist["Return"])
 conditions = [hist["Return"] > 0]
 choices = [1]
 hist["Result"] = np.select(conditions, choices, default=0)
@@ -208,7 +210,7 @@ features = sorted(
 
 hist = hist.dropna()
 model = lgb.LGBMRegressor(n_jobs=-1, random_state=1)
-model.fit(hist[features], hist["Result"])
+model.fit(hist[features], hist["Return"])
 
 cv_indicies = list(KFold().split(hist))
 
@@ -223,12 +225,13 @@ def my_cross_val_predict(estimator, X, y=None, cv=None):
 
 
 hist["pred_Return"] = my_cross_val_predict(
-    model, hist[features].values, hist["Result"].values, cv=cv_indicies
+    model, hist[features].values, hist["Return"].values, cv=cv_indicies
 )
 hist = hist.dropna()
 
 print("毎時刻、pred_Returnがプラスのときだけトレードした場合の累積リターン")
-hist[hist["pred_Return"] > 0]["Result"].cumsum().plot(label="買い")
+print(hist)
+hist[hist["pred_Return"] > 0]["Return"].cumsum().plot(label="買い")
 plt.title("累積リターン")
 plt.legend(bbox_to_anchor=(1.05, 1))
 plt.show()
