@@ -2,7 +2,8 @@ from email.policy import default
 from random import choices
 import yfinance as yf
 import matplotlib.pyplot as plt
-from sklearn.ensemble import RandomForestClassifier
+from pandas import DataFrame
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.metrics import classification_report, accuracy_score
 from sklearn.model_selection import cross_val_score, KFold, TimeSeriesSplit
 import numpy as np
@@ -11,44 +12,25 @@ import lightgbm as lgb
 
 ticker = yf.Ticker("9984.T")
 
-# get historical market data
 hist = ticker.history(period="max")
-# valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max
-# valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
 
 ma_1 = 5
 ma_2 = 25
-# ma_3 = 75
 
 hist["sma_1"] = hist.Close.rolling(window=ma_1, min_periods=1).mean()
 hist["sma_2"] = hist.Close.rolling(window=ma_2, min_periods=1).mean()
 sma_1 = hist.Close.rolling(window=ma_1, min_periods=1).mean()
 sma_2 = hist.Close.rolling(window=ma_2, min_periods=1).mean()
-# sma_3 = hist.Close.rolling(window=ma_3, min_periods=1).mean()
 
 diff = sma_1 - sma_2
 hist["gc"] = (diff.shift(1) < 0) & (diff > 0)
 hist["dc"] = (diff.shift(1) > 0) & (diff < 0)
-# gc = sma_1[(diff.shift(1) < 0) & (diff > 0)]
-# dc = sma_1[(diff.shift(1) > 0) & (diff < 0)]
 
-# hist = hist[(hist["gc"] == True) | (hist["dc"] == True)]
 hist = hist[hist["gc"] | hist["dc"] == True]
 hist["Return"] = hist.Close.diff().shift(-1)
+hist = hist[hist["gc"] == True]
 print(hist)
-# hist = hist[hist["gc"] == True]
-print(hist["Return"])
 print("Total: ", hist["Return"].sum())
-conditions = [hist["Return"] > 0]
-choices = [1]
-hist["Result"] = np.select(conditions, choices, default=0)
-print(hist)
-# Total = hist["Return"].sum()
-# print("Total: ", Total)
-# train = hist["2000-01-04":"2015-12-31"]
-# print(train)
-# test = hist["2016-01-01":]
-# print(test)
 
 
 def calc_features(hist):
@@ -151,7 +133,6 @@ def calc_features(hist):
 
 hist = hist.dropna()
 hist = calc_features(hist)
-# print(hist)
 
 features = sorted(
     [
@@ -205,14 +186,29 @@ features = sorted(
         "TEMA",
         "TRIMA",
         "WMA",
+        "Open",
+        "High",
+        "Low",
+        "Close",
+        "Volume",
+        "sma_1",
+        "sma_2",
     ]
 )
-
-# print(features)
-
 hist = hist.dropna()
-model = lgb.LGBMRegressor(n_jobs=-1, random_state=1)
+model = RandomForestRegressor(n_estimators=100, max_depth=5, n_jobs=-1, random_state=1)
 model.fit(hist[features], hist["Return"])
+
+df = DataFrame({"feature": features, "importance": model.feature_importances_})
+df = df.sort_values("importance", ascending=False)
+df = df.reset_index()
+print(df)
+
+df = df.sort_values("importance", ascending=True)
+fig, ax = plt.subplots(figsize=(12, 9))
+ax.barh(df["feature"], df["importance"])
+ax.set_xlabel("Random Forest Feature Importance")
+plt.show()
 
 cv_indicies = list(KFold().split(hist))
 
@@ -230,112 +226,8 @@ hist["pred_Return"] = my_cross_val_predict(
     model, hist[features].values, hist["Return"].values, cv=cv_indicies
 )
 hist = hist.dropna()
-
-print("毎時刻、pred_Returnがプラスのときだけトレードした場合の累積リターン")
-print(hist)
-hist[hist["pred_Return"] > 0]["Return"].cumsum().plot(label="買い")
-plt.title("累積リターン")
-plt.legend(bbox_to_anchor=(1.05, 1))
-plt.show()
-
+print("pred_Returnがプラスのときだけトレードした場合の累積リターン")
 hist = hist[hist["pred_Return"] > 0]
 print(hist)
-Total = hist["Return"].sum()
-print("Total: ", Total)
 print(hist["Return"])
-
-# x_train = train[["Open", "High", "Low", "Close", "Volume", "sma_1", "sma_2"]]
-# y_train = train["Result"]
-
-# x_test = test[["Open", "High", "Low", "Close", "Volume", "sma_1", "sma_2"]]
-# y_test = test["Result"]
-
-
-# model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=1)
-# model.fit(x_train, y_train)
-# pred = model.predict(x_test)
-
-# print("result: ", model.score(x_test, y_test))
-# print(classification_report(y_test, pred))
-
-"""
-# periods = [5, 25, 75]
-# cols = []
-# for period in periods:
-#     col = "{} windows simple moving average".format(period)
-#     hist[col] = hist.Close.rolling(period, min_periods=1).mean()
-#     cols.append(col)
-# for col in cols:
-#     plt.plot(hist[col], label=col)
-"""
-
-# plt.subplots(figsize=(15, 5))
-# plt.plot(hist.Close)
-# plt.plot(sma_1, label="Moving Average {} days".format(ma_1))
-# plt.plot(sma_2, label="Moving Average {} days".format(ma_2))
-# # plt.plot(sma_3, label="Moving Average {} days".format(ma_3))
-# plt.scatter(gc.index, gc, label="Golden Cross", s=50, c="red", alpha=0.7)
-# plt.scatter(dc.index, dc, label="Dead Cross", s=50, c="black", alpha=0.7)
-# plt.grid(True)
-# plt.legend()
-# plt.show()
-
-
-"""
-# get stock info
-ticker.info
-
-# show actions (dividends, splits)
-ticker.actions
-
-# show dividends
-ticker.dividends
-
-# show splits
-ticker.splits
-
-# show financials
-ticker.financials
-ticker.quarterly_financials
-
-# show major holders
-ticker.major_holders
-
-# show institutional holders
-ticker.institutional_holders
-
-# show balance sheet
-ticker.balance_sheet
-ticker.quarterly_balance_sheet
-
-# show cashflow
-ticker.cashflow
-ticker.quarterly_cashflow
-
-# show earnings
-ticker.earnings
-ticker.quarterly_earnings
-
-# show sustainability
-ticker.sustainability
-
-# show analysts recommendations
-ticker.recommendations
-
-# show next event (earnings, etc)
-ticker.calendar
-
-# show ISIN code - *experimental*
-# ISIN = International Securities Identification Number
-ticker.isin
-
-# show options expirations
-ticker.options
-
-# show news
-ticker.news
-
-# get option chain for specific expiration
-opt = ticker.option_chain('YYYY-MM-DD')
-# data available via: opt.calls, opt.puts
-"""
+print("Total: ", hist["Return"].sum())
