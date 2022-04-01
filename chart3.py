@@ -2,6 +2,7 @@ from email.policy import default
 from random import choices
 import yfinance as yf
 import matplotlib.pyplot as plt
+import pandas as pd
 from pandas import DataFrame
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.metrics import classification_report, accuracy_score
@@ -9,28 +10,32 @@ from sklearn.model_selection import cross_val_score, KFold, TimeSeriesSplit
 import numpy as np
 import talib
 import lightgbm as lgb
+import random
 
-ticker = yf.Ticker("9984.T")
+codes = ["9432.T", "9433.T", "9984.T"]
+hist = dict()
+for code in codes:
+    ticker = yf.Ticker(code)
+    hist[code] = ticker.history(period="max")
 
-hist = ticker.history(period="max")
+    ma_1 = 5
+    ma_2 = 25
 
-ma_1 = 5
-ma_2 = 25
+    hist[code]["sma_1"] = hist[code].Close.rolling(window=ma_1, min_periods=1).mean()
+    hist[code]["sma_2"] = hist[code].Close.rolling(window=ma_2, min_periods=1).mean()
+    sma_1 = hist[code].Close.rolling(window=ma_1, min_periods=1).mean()
+    sma_2 = hist[code].Close.rolling(window=ma_2, min_periods=1).mean()
 
-hist["sma_1"] = hist.Close.rolling(window=ma_1, min_periods=1).mean()
-hist["sma_2"] = hist.Close.rolling(window=ma_2, min_periods=1).mean()
-sma_1 = hist.Close.rolling(window=ma_1, min_periods=1).mean()
-sma_2 = hist.Close.rolling(window=ma_2, min_periods=1).mean()
+    diff = sma_1 - sma_2
+    hist[code]["gc"] = (diff.shift(1) < 0) & (diff > 0)
+    hist[code]["dc"] = (diff.shift(1) > 0) & (diff < 0)
 
-diff = sma_1 - sma_2
-hist["gc"] = (diff.shift(1) < 0) & (diff > 0)
-hist["dc"] = (diff.shift(1) > 0) & (diff < 0)
+    hist[code] = hist[code][hist[code]["gc"] | hist[code]["dc"] == True]
+    hist[code]["Return"] = hist[code].Close.diff().shift(-1)
+    hist[code] = hist[code][hist[code]["gc"] == True]
 
-hist = hist[hist["gc"] | hist["dc"] == True]
-hist["Return"] = hist.Close.diff().shift(-1)
-hist = hist[hist["gc"] == True]
-print(hist)
-print("Total: ", hist["Return"].sum())
+hist = pd.concat(hist)
+r1 = hist["Return"].sum()
 
 
 def calc_features(hist):
@@ -39,8 +44,6 @@ def calc_features(hist):
     low = hist["Low"]
     close = hist["Close"]
     volume = hist["Volume"]
-
-    orig_columns = hist.columns
 
     hilo = (hist["High"] + hist["Low"]) / 2
     (
@@ -148,20 +151,20 @@ features = sorted(
         "MACD_macdsignal",
         "MACD_macdhist",
         "MFI",
-        #     'MINUS_DI',
-        #     'MINUS_DM',
+        "MINUS_DI",
+        "MINUS_DM",
         "MOM",
-        #     'PLUS_DI',
-        #     'PLUS_DM',
+        "PLUS_DI",
+        "PLUS_DM",
         "RSI",
         "STOCH_slowk",
         "STOCH_slowd",
         "STOCHF_fastk",
-        #     'STOCHRSI_fastd',
+        "STOCHRSI_fastd",
         "ULTOSC",
         "WILLR",
-        #     'ADOSC',
-        #     'NATR',
+        "ADOSC",
+        "NATR",
         "HT_DCPERIOD",
         "HT_DCPHASE",
         "HT_PHASOR_inphase",
@@ -195,21 +198,14 @@ features = sorted(
         "sma_2",
     ]
 )
+features = random.sample(features, 20)
 hist = hist.dropna()
 model = RandomForestRegressor(n_estimators=100, max_depth=5, n_jobs=-1, random_state=1)
 model.fit(hist[features], hist["Return"])
 
 df = DataFrame({"feature": features, "importance": model.feature_importances_})
 df = df.sort_values("importance", ascending=False)
-df = df.reset_index()
 print(df)
-
-# df = df.sort_values("importance", ascending=True)
-fig, ax = plt.subplots(figsize=(12, 9))
-ax.barh(df["feature"], df["importance"])
-ax.invert_yaxis()
-ax.set_xlabel("Random Forest Feature Importance")
-plt.show()
 
 cv_indicies = list(KFold().split(hist))
 
@@ -227,8 +223,9 @@ hist["pred_Return"] = my_cross_val_predict(
     model, hist[features].values, hist["Return"].values, cv=cv_indicies
 )
 hist = hist.dropna()
-print("pred_Returnがプラスのときだけトレードした場合の累積リターン")
 hist = hist[hist["pred_Return"] > 0]
-print(hist)
-print(hist["Return"])
-print("Total: ", hist["Return"].sum())
+r2 = hist["Return"].sum()
+
+print("リターン: ", r1)
+print("特徴量：", features)
+print("予測リターン: ", r2)
