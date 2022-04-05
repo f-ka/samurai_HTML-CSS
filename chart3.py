@@ -11,6 +11,8 @@ import numpy as np
 import talib
 import lightgbm as lgb
 import random
+from IPython.core.display import display
+
 
 codes = ["9432.T", "9433.T", "9984.T"]
 hist = dict()
@@ -36,6 +38,7 @@ for code in codes:
 
 hist = pd.concat(hist)
 r1 = hist["Return"].sum()
+print(hist)
 
 
 def calc_features(hist):
@@ -198,14 +201,17 @@ features = sorted(
         "sma_2",
     ]
 )
-features = random.sample(features, 20)
+# features = random.sample(features, 20)
 hist = hist.dropna()
 model = RandomForestRegressor(n_estimators=100, max_depth=5, n_jobs=-1, random_state=1)
 model.fit(hist[features], hist["Return"])
-
+print(model.feature_importances_)
+print(features)
 df = DataFrame({"feature": features, "importance": model.feature_importances_})
 df = df.sort_values("importance", ascending=False)
-print(df)
+pd.set_option("display.max_rows", 100)
+
+display(df.head(100))
 
 cv_indicies = list(KFold().split(hist))
 
