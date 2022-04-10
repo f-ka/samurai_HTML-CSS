@@ -9,36 +9,42 @@ from sklearn.metrics import classification_report, accuracy_score
 from sklearn.model_selection import cross_val_score, KFold, TimeSeriesSplit
 import numpy as np
 import talib
+import warnings
+
+warnings.filterwarnings("ignore")
 import lightgbm as lgb
 import random
 from IPython.core.display import display
 
 
-codes = ["9432.T", "9433.T", "9984.T"]
-hist = dict()
-for code in codes:
-    ticker = yf.Ticker(code)
-    hist[code] = ticker.history(period="max")
+# codes = ["9432.T", "9433.T", "9984.T"]
+# hist = dict()
+# for code in codes:
+#     ticker = yf.Ticker(code)
+#     hist[code] = ticker.history(period="max")
 
-    ma_1 = 5
-    ma_2 = 25
+#     ma_1 = 5
+#     ma_2 = 25
 
-    hist[code]["sma_1"] = hist[code].Close.rolling(window=ma_1, min_periods=1).mean()
-    hist[code]["sma_2"] = hist[code].Close.rolling(window=ma_2, min_periods=1).mean()
-    sma_1 = hist[code].Close.rolling(window=ma_1, min_periods=1).mean()
-    sma_2 = hist[code].Close.rolling(window=ma_2, min_periods=1).mean()
+#     hist[code]["sma_1"] = hist[code].Close.rolling(window=ma_1, min_periods=1).mean()
+#     hist[code]["sma_2"] = hist[code].Close.rolling(window=ma_2, min_periods=1).mean()
+#     sma_1 = hist[code].Close.rolling(window=ma_1, min_periods=1).mean()
+#     sma_2 = hist[code].Close.rolling(window=ma_2, min_periods=1).mean()
 
-    diff = sma_1 - sma_2
-    hist[code]["gc"] = (diff.shift(1) < 0) & (diff > 0)
-    hist[code]["dc"] = (diff.shift(1) > 0) & (diff < 0)
+#     diff = sma_1 - sma_2
+#     hist[code]["gc"] = (diff.shift(1) < 0) & (diff > 0)
+#     hist[code]["dc"] = (diff.shift(1) > 0) & (diff < 0)
 
-    hist[code] = hist[code][hist[code]["gc"] | hist[code]["dc"] == True]
-    hist[code]["Return"] = hist[code].Close.diff().shift(-1)
-    hist[code] = hist[code][hist[code]["gc"] == True]
+#     hist[code] = hist[code][hist[code]["gc"] | hist[code]["dc"] == True]
+#     hist[code]["Return"] = hist[code].Close.diff().shift(-1)
+#     hist[code] = hist[code][hist[code]["gc"] == True]
 
-hist = pd.concat(hist)
+# hist = pd.concat(hist)
+
+# hist.to_csv("hist.csv")
+
+hist = pd.read_csv("hist.csv")
 r1 = hist["Return"].sum()
-print(hist)
 
 
 def calc_features(hist):
@@ -145,39 +151,39 @@ features = sorted(
         "ADX",
         "ADXR",
         "APO",
-        "AROON_aroondown",
-        "AROON_aroonup",
-        "AROONOSC",
-        "CCI",
+        # "AROON_aroondown",
+        # "AROON_aroonup",
+        # "AROONOSC",
+        # "CCI",
         "DX",
         "MACD_macd",
         "MACD_macdsignal",
         "MACD_macdhist",
         "MFI",
-        "MINUS_DI",
-        "MINUS_DM",
+        # "MINUS_DI",
+        # "MINUS_DM",
         "MOM",
-        "PLUS_DI",
+        # "PLUS_DI",
         "PLUS_DM",
-        "RSI",
+        # "RSI",
         "STOCH_slowk",
         "STOCH_slowd",
         "STOCHF_fastk",
         "STOCHRSI_fastd",
         "ULTOSC",
-        "WILLR",
+        # "WILLR",
         "ADOSC",
         "NATR",
         "HT_DCPERIOD",
-        "HT_DCPHASE",
+        # "HT_DCPHASE",
         "HT_PHASOR_inphase",
         "HT_PHASOR_quadrature",
-        "HT_TRENDMODE",
+        # "HT_TRENDMODE",
         "BETA",
         "LINEARREG",
         "LINEARREG_ANGLE",
         "LINEARREG_INTERCEPT",
-        "LINEARREG_SLOPE",
+        # "LINEARREG_SLOPE",
         "STDDEV",
         "BBANDS_upperband",
         "BBANDS_middleband",
@@ -186,7 +192,7 @@ features = sorted(
         "EMA",
         "HT_TRENDLINE",
         "KAMA",
-        "MA",
+        # "MA",
         "MIDPOINT",
         "T3",
         "TEMA",
@@ -203,14 +209,15 @@ features = sorted(
 )
 # features = random.sample(features, 20)
 hist = hist.dropna()
-model = RandomForestRegressor(n_estimators=100, max_depth=5, n_jobs=-1, random_state=1)
+model = lgb.LGBMRegressor(n_jobs=-1, random_state=1)
+# model = RandomForestRegressor(n_estimators=100, max_depth=5, n_jobs=-1, random_state=1)
 model.fit(hist[features], hist["Return"])
-print(model.feature_importances_)
-print(features)
-df = DataFrame({"feature": features, "importance": model.feature_importances_})
+# print(model.feature_importances_)
+# print(features)
+df = pd.DataFrame({"feature": features, "importance": model.feature_importances_})
 df = df.sort_values("importance", ascending=False)
 pd.set_option("display.max_rows", 100)
-
+df = df.reset_index()
 display(df.head(100))
 
 cv_indicies = list(KFold().split(hist))
@@ -233,5 +240,5 @@ hist = hist[hist["pred_Return"] > 0]
 r2 = hist["Return"].sum()
 
 print("リターン: ", r1)
-print("特徴量：", features)
+# print("特徴量：", features)
 print("予測リターン: ", r2)
