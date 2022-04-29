@@ -27,41 +27,8 @@ files = glob.glob("./hist_day40/*.csv")
 hist = dict()
 for file in files:
     code = os.path.splitext(os.path.basename(file))[0]
-    hist[code] = pd.read_csv(file)
-
-    ma_1 = 5
-    ma_2 = 25
-    hist[code]["sma_1"] = hist[code].close.rolling(window=ma_1, min_periods=1).mean()
-    hist[code]["sma_2"] = hist[code].close.rolling(window=ma_2, min_periods=1).mean()
-    sma_1 = hist[code].close.rolling(window=ma_1, min_periods=1).mean()
-    sma_2 = hist[code].close.rolling(window=ma_2, min_periods=1).mean()
-    diff = sma_1 - sma_2
-    hist[code]["gc"] = (diff.shift(1) < 0) & (diff > 0)
-    hist[code]["dc"] = (diff.shift(1) > 0) & (diff < 0)
-    hist[code] = hist[code][hist[code]["gc"] | hist[code]["dc"] == True]
-    hist[code]["Return"] = hist[code].close.diff().shift(-1)
-    hist[code] = hist[code][hist[code]["gc"] == True]
-
-    # df_diff = hist[code]["close"].diff(1)
-    # df_up, df_down = df_diff.copy(), df_diff.copy()
-    # df_up[df_up < 0] = 0
-    # df_down[df_down > 0] = 0
-    # df_down = df_down * -1
-    # df_up_sma14 = df_up.rolling(window=14, center=False).mean()
-    # df_down_sma14 = df_down.rolling(window=14, center=False).mean()
-    # hist[code]["RSI"] = 100.0 * (df_up_sma14 / (df_up_sma14 + df_down_sma14))
-    # hist[code]["Under"] = (hist[code]["RSI"].shift() > 30) & (hist[code]["RSI"] < 30)
-    # hist[code]["Over"] = (hist[code]["RSI"].shift() < 70) & (hist[code]["RSI"] > 70)
-    # hist[code] = hist[code][hist[code]["Under"] | hist[code]["Over"] == True]
-    # hist[code]["Buy"] = (hist[code]["Under"] == True) & (
-    #     hist[code]["Under"].shift(1) == False
-    # )
-    # hist[code]["Sell"] = (hist[code]["Over"] == True) & (
-    #     hist[code]["Over"].shift(1) == False
-    # )
-    # hist[code] = hist[code][hist[code]["Buy"] | hist[code]["Sell"] == True]
-    # hist[code]["Return"] = hist[code].close.diff().shift(-1)
-    # hist[code] = hist[code][hist[code]["Buy"] == True]
+    hist[code] = pd.read_csv(file).tail(1)
+    print(hist[code])
 
 hist = pd.concat(hist)
 
@@ -169,39 +136,39 @@ features = sorted(
         "ADX",
         "ADXR",
         "APO",
-        # "AROON_aroondown",
-        # "AROON_aroonup",
-        # "AROONOSC",
-        # "CCI",
+        "AROON_aroondown",
+        "AROON_aroonup",
+        "AROONOSC",
+        "CCI",
         "DX",
         "MACD_macd",
         "MACD_macdsignal",
         "MACD_macdhist",
         "MFI",
-        # "MINUS_DI",
-        # "MINUS_DM",
+        "MINUS_DI",
+        "MINUS_DM",
         "MOM",
-        # "PLUS_DI",
+        "PLUS_DI",
         "PLUS_DM",
-        # "RSI",
+        "RSI",
         "STOCH_slowk",
         "STOCH_slowd",
         "STOCHF_fastk",
         "STOCHRSI_fastd",
         "ULTOSC",
-        # "WILLR",
+        "WILLR",
         "ADOSC",
         "NATR",
         "HT_DCPERIOD",
-        # "HT_DCPHASE",
+        "HT_DCPHASE",
         "HT_PHASOR_inphase",
         "HT_PHASOR_quadrature",
-        # "HT_TRENDMODE",
+        "HT_TRENDMODE",
         "BETA",
         "LINEARREG",
         "LINEARREG_ANGLE",
         "LINEARREG_INTERCEPT",
-        # "LINEARREG_SLOPE",
+        "LINEARREG_SLOPE",
         "STDDEV",
         "BBANDS_upperband",
         "BBANDS_middleband",
@@ -210,7 +177,7 @@ features = sorted(
         "EMA",
         "HT_TRENDLINE",
         "KAMA",
-        # "MA",
+        "MA",
         "MIDPOINT",
         "T3",
         "TEMA",
@@ -221,33 +188,14 @@ features = sorted(
         "low",
         "close",
         "volume",
-        "sma_1",
-        "sma_2",
     ]
 )
 hist = hist.dropna()
 
-cv_indicies = list(KFold().split(hist))
-
-
-def my_cross_val_predict(estimator, X, y=None, cv=None):
-    y_pred = y.copy()
-    y_pred[:] = np.nan
-    for train_idx, val_idx in cv:
-        estimator.fit(X[train_idx], y[train_idx])
-        y_pred[val_idx] = estimator.predict(X[val_idx])
-    return y_pred
-
-
 loaded_model = pickle.load(open("finalized_model.sav", "rb"))
-
 # loaded_model = pickle.load(open("finalized_model_rsi.sav", "rb"))
 
-hist["pred_Return"] = my_cross_val_predict(
-    loaded_model, hist[features].values, hist["Return"].values, cv=cv_indicies
-)
-hist = hist.dropna()
-print(hist["Return"])
-print(hist)
+hist["pred_Return"] = loaded_model.predict(hist[features])
+
 hist = hist[hist["pred_Return"] > 0]
 print(hist)
