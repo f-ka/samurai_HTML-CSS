@@ -29,7 +29,12 @@ for code in codes:
 
     try:
         symbol_data = my_share.get_historical(
-            share.PERIOD_TYPE_YEAR, 5, share.FREQUENCY_TYPE_DAY, 1
+            # share.PERIOD_TYPE_YEAR, 5, share.FREQUENCY_TYPE_DAY, 1
+            share.PERIOD_TYPE_MONTH,
+            6,
+            share.FREQUENCY_TYPE_DAY,
+            1
+            # share.PERIOD_TYPE_DAY, 50, share.FREQUENCY_TYPE_DAY, 1
         )
     except YahooFinanceError as e:
         print(e.message)
@@ -37,5 +42,8 @@ for code in codes:
 
     hist[code] = pd.DataFrame(symbol_data)
     hist[code]["datetime"] = pd.to_datetime(hist[code].timestamp, unit="ms")
-    print(hist)
-    hist[code].to_csv("./hist/" + code + ".csv")
+    print(code)
+    # hist[code].to_csv("./hist/" + code + ".csv")
+    # hist[code].to_csv("./hist_year/" + code + ".csv")
+    hist[code].to_csv("./hist_month/" + code + ".csv")
+    # hist[code].to_csv("./hist_day/" + code + ".csv")

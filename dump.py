@@ -23,50 +23,6 @@ from yahoo_finance_api2.exceptions import YahooFinanceError
 import os
 import pickle
 
-files = glob.glob("./hist/*.csv")
-hist = dict()
-for file in files:
-    code = os.path.splitext(os.path.basename(file))[0]
-    hist[code] = pd.read_csv(file)
-    print(hist[code])
-
-    ma_1 = 5
-    ma_2 = 25
-    hist[code]["sma_1"] = hist[code].close.rolling(window=ma_1, min_periods=1).mean()
-    hist[code]["sma_2"] = hist[code].close.rolling(window=ma_2, min_periods=1).mean()
-    sma_1 = hist[code].close.rolling(window=ma_1, min_periods=1).mean()
-    sma_2 = hist[code].close.rolling(window=ma_2, min_periods=1).mean()
-    diff = sma_1 - sma_2
-    hist[code]["gc"] = (diff.shift(1) < 0) & (diff > 0)
-    hist[code]["dc"] = (diff.shift(1) > 0) & (diff < 0)
-    hist[code] = hist[code][hist[code]["gc"] | hist[code]["dc"] == True]
-    hist[code]["Return"] = hist[code].close.diff().shift(-1)
-    hist[code] = hist[code][hist[code]["gc"] == True]
-
-    # df_diff = hist[code]["close"].diff(1)
-    # df_up, df_down = df_diff.copy(), df_diff.copy()
-    # df_up[df_up < 0] = 0
-    # df_down[df_down > 0] = 0
-    # df_down = df_down * -1
-    # df_up_sma14 = df_up.rolling(window=14, center=False).mean()
-    # df_down_sma14 = df_down.rolling(window=14, center=False).mean()
-    # hist[code]["RSI"] = 100.0 * (df_up_sma14 / (df_up_sma14 + df_down_sma14))
-    # hist[code]["Under"] = (hist[code]["RSI"].shift() > 30) & (hist[code]["RSI"] < 30)
-    # hist[code]["Over"] = (hist[code]["RSI"].shift() < 70) & (hist[code]["RSI"] > 70)
-    # hist[code] = hist[code][hist[code]["Under"] | hist[code]["Over"] == True]
-    # hist[code]["Buy"] = (hist[code]["Under"] == True) & (
-    #     hist[code]["Under"].shift(1) == False
-    # )
-    # hist[code]["Sell"] = (hist[code]["Over"] == True) & (
-    #     hist[code]["Over"].shift(1) == False
-    # )
-    # hist[code] = hist[code][hist[code]["Buy"] | hist[code]["Sell"] == True]
-    # hist[code]["Return"] = hist[code].close.diff().shift(-1)
-    # hist[code] = hist[code][hist[code]["Buy"] == True]
-
-hist = pd.concat(hist)
-r1 = hist["Return"].sum()
-
 
 def calc_features(hist):
     open = hist["open"]
@@ -160,80 +116,94 @@ def calc_features(hist):
     )
     hist["LINEARREG_SLOPE"] = talib.LINEARREG_SLOPE(close, timeperiod=14)
     hist["STDDEV"] = talib.STDDEV(close, timeperiod=5, nbdev=1)
+    hist["SMA5"] = talib.SMA(close, timeperiod=5)
+    hist["SMA25"] = talib.SMA(close, timeperiod=25)
 
     return hist
 
 
-hist = hist.dropna()
-hist = calc_features(hist)
+files = glob.glob("./hist/*.csv")
+hist = dict()
+for file in files:
+    code = os.path.splitext(os.path.basename(file))[0]
+    hist[code] = pd.read_csv(file)
+
+    hist[code] = calc_features(hist[code])
+
+    diff = hist[code]["SMA5"] - hist[code]["SMA25"]
+    hist[code]["gc"] = (diff.shift(1) < 0) & (diff > 0)
+    hist[code]["dc"] = (diff.shift(1) > 0) & (diff < 0)
+    hist[code] = hist[code][hist[code]["gc"] | hist[code]["dc"] == True]
+    hist[code]["Return"] = hist[code].close.diff().shift(-1)
+    hist[code] = hist[code][hist[code]["gc"] == True]
+    print(hist[code])
+
+hist = pd.concat(hist)
+
 features = sorted(
     [
+        "ADOSC",
         "ADX",
         "ADXR",
         "APO",
         "AROON_aroondown",
         "AROON_aroonup",
         "AROONOSC",
+        "BBANDS_lowerband",
+        "BBANDS_middleband",
+        "BBANDS_upperband",
+        "BETA",
         "CCI",
+        "DEMA",
         "DX",
-        "MACD_macd",
-        "MACD_macdsignal",
-        "MACD_macdhist",
-        "MFI",
-        "MINUS_DI",
-        "MINUS_DM",
-        "MOM",
-        "PLUS_DI",
-        "PLUS_DM",
-        "RSI",
-        "STOCH_slowk",
-        "STOCH_slowd",
-        "STOCHF_fastk",
-        "STOCHRSI_fastd",
-        "ULTOSC",
-        "WILLR",
-        "ADOSC",
-        "NATR",
+        "EMA",
         "HT_DCPERIOD",
         "HT_DCPHASE",
         "HT_PHASOR_inphase",
         "HT_PHASOR_quadrature",
+        "HT_TRENDLINE",
         "HT_TRENDMODE",
-        "BETA",
+        "KAMA",
         "LINEARREG",
         "LINEARREG_ANGLE",
         "LINEARREG_INTERCEPT",
         "LINEARREG_SLOPE",
-        "STDDEV",
-        "BBANDS_upperband",
-        "BBANDS_middleband",
-        "BBANDS_lowerband",
-        "DEMA",
-        "EMA",
-        "HT_TRENDLINE",
-        "KAMA",
         "MA",
+        "MACD_macd",
+        "MACD_macdhist",
+        "MACD_macdsignal",
+        "MFI",
         "MIDPOINT",
+        "MINUS_DI",
+        "MINUS_DM",
+        "MOM",
+        "NATR",
+        "PLUS_DI",
+        "PLUS_DM",
+        "RSI",
+        "STDDEV",
+        "STOCH_slowd",
+        "STOCH_slowk",
+        "STOCHF_fastk",
+        "STOCHRSI_fastd",
         "T3",
         "TEMA",
         "TRIMA",
+        "ULTOSC",
+        "WILLR",
         "WMA",
-        "open",
-        "high",
-        "low",
-        "close",
-        "volume",
     ]
 )
+
 hist = hist.dropna()
+
 model = lgb.LGBMRegressor(n_jobs=-1, random_state=1)
 # model = RandomForestRegressor(n_estimators=100, max_depth=5, n_jobs=-1, random_state=1)
+
 model.fit(hist[features], hist["Return"])
 hist["pred_Return"] = model.predict(hist[features])
-# hist = hist[hist["pred_Return"] > 0]
-print(hist.shape)
-print(hist["Return"])
+
+hist = hist[hist["pred_Return"] > 0]
 print(hist)
 pickle.dump(model, open("finalized_model.sav", "wb"))
-
 # pickle.dump(model, open("finalized_model_rsi.sav", "wb"))

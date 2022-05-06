@@ -23,15 +23,6 @@ import pickle
 import glob
 import os
 
-files = glob.glob("./hist_day40/*.csv")
-hist = dict()
-for file in files:
-    code = os.path.splitext(os.path.basename(file))[0]
-    hist[code] = pd.read_csv(file).tail(1)
-    print(hist[code])
-
-hist = pd.concat(hist)
-
 
 def calc_features(hist):
     open = hist["open"]
@@ -129,68 +120,81 @@ def calc_features(hist):
     return hist
 
 
+files = glob.glob("./hist_month/*.csv")
+hist = dict()
+for file in files:
+    code = os.path.splitext(os.path.basename(file))[0]
+    hist[code] = pd.read_csv(file)
+
+    hist[code] = calc_features(hist[code])
+
+    hist[code] = hist[code].tail(1)
+
+    print(code)
+    print(hist[code])
+
+hist = pd.concat(hist)
+print(hist)
+
+
 hist = hist.dropna()
-hist = calc_features(hist)
+
 features = sorted(
     [
+        "ADOSC",
         "ADX",
         "ADXR",
         "APO",
         "AROON_aroondown",
         "AROON_aroonup",
         "AROONOSC",
+        "BBANDS_lowerband",
+        "BBANDS_middleband",
+        "BBANDS_upperband",
+        "BETA",
         "CCI",
+        "DEMA",
         "DX",
-        "MACD_macd",
-        "MACD_macdsignal",
-        "MACD_macdhist",
-        "MFI",
-        "MINUS_DI",
-        "MINUS_DM",
-        "MOM",
-        "PLUS_DI",
-        "PLUS_DM",
-        "RSI",
-        "STOCH_slowk",
-        "STOCH_slowd",
-        "STOCHF_fastk",
-        "STOCHRSI_fastd",
-        "ULTOSC",
-        "WILLR",
-        "ADOSC",
-        "NATR",
+        "EMA",
         "HT_DCPERIOD",
         "HT_DCPHASE",
         "HT_PHASOR_inphase",
         "HT_PHASOR_quadrature",
+        "HT_TRENDLINE",
         "HT_TRENDMODE",
-        "BETA",
+        "KAMA",
         "LINEARREG",
         "LINEARREG_ANGLE",
         "LINEARREG_INTERCEPT",
         "LINEARREG_SLOPE",
-        "STDDEV",
-        "BBANDS_upperband",
-        "BBANDS_middleband",
-        "BBANDS_lowerband",
-        "DEMA",
-        "EMA",
-        "HT_TRENDLINE",
-        "KAMA",
         "MA",
+        "MACD_macd",
+        "MACD_macdhist",
+        "MACD_macdsignal",
+        "MFI",
         "MIDPOINT",
+        "MINUS_DI",
+        "MINUS_DM",
+        "MOM",
+        "NATR",
+        "PLUS_DI",
+        "PLUS_DM",
+        "RSI",
+        "STDDEV",
+        "STOCH_slowd",
+        "STOCH_slowk",
+        "STOCHF_fastk",
+        "STOCHRSI_fastd",
         "T3",
         "TEMA",
         "TRIMA",
+        "ULTOSC",
+        "WILLR",
         "WMA",
-        "open",
-        "high",
-        "low",
-        "close",
-        "volume",
     ]
 )
-hist = hist.dropna()
+
+# hist = hist.dropna()
 
 loaded_model = pickle.load(open("finalized_model.sav", "rb"))
 # loaded_model = pickle.load(open("finalized_model_rsi.sav", "rb"))
